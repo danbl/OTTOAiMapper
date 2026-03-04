@@ -1,0 +1,62 @@
+[
+    {
+        "tab": "OttoAiMapper::Config.tabGeneral",
+        "key": "OttoAiMapper.openai_api_key",
+        "label": "OttoAiMapper::Config.labelOpenAiApiKey",
+        "type": "password",
+        "default": ""
+    },
+    {
+        "tab": "OttoAiMapper::Config.tabGeneral",
+        "key": "OttoAiMapper.ai_model",
+        "label": "OttoAiMapper::Config.labelAiModel",
+        "type": "dropdown",
+        "default": "gpt-4o",
+        "possibleValues": {
+            "gpt-4o": "GPT-4o (Recommended)",
+            "gpt-4o-mini": "GPT-4o Mini (Faster / Cheaper)",
+            "gpt-4-turbo": "GPT-4 Turbo"
+        }
+    },
+    {
+        "tab": "OttoAiMapper::Config.tabGeneral",
+        "key": "OttoAiMapper.confidence_threshold",
+        "label": "OttoAiMapper::Config.labelConfidenceThreshold",
+        "type": "dropdown",
+        "default": "0.75",
+        "possibleValues": {
+            "0.5": "50% – Aggressive (map more, less precise)",
+            "0.75": "75% – Balanced (recommended)",
+            "0.9": "90% – Conservative (map less, very precise)"
+        }
+    },
+    {
+        "tab": "OttoAiMapper::Config.tabGeneral",
+        "key": "OttoAiMapper.auto_apply",
+        "label": "OttoAiMapper::Config.labelAutoApply",
+        "type": "dropdown",
+        "default": "0",
+        "possibleValues": {
+            "0": "No – Require manual confirmation",
+            "1": "Yes – Apply mappings automatically"
+        }
+    },
+    {
+        "tab": "OttoAiMapper::Config.tabCatalog",
+        "key": "OttoAiMapper.otto_catalog_id",
+        "label": "OttoAiMapper::Config.labelOttoCatalogId",
+        "type": "text",
+        "default": ""
+    },
+    {
+        "tab": "OttoAiMapper::Config.tabCatalog",
+        "key": "OttoAiMapper.language",
+        "label": "OttoAiMapper::Config.labelLanguage",
+        "type": "dropdown",
+        "default": "de",
+        "possibleValues": {
+            "de": "Deutsch",
+            "en": "English"
+        }
+    }
+]

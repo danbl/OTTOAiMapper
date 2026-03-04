@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <title>OTTO AI Mapper</title>
+    <style>
+        /* Scoped styles for the plugin UI */
+        .oam-root { font-family: 'Segoe UI', sans-serif; padding: 24px; color: #333; max-width: 1400px; }
+        .oam-header { display:flex; align-items:center; gap:16px; margin-bottom:28px; }
+        .oam-header h1 { margin:0; font-size:22px; font-weight:600; }
+        .oam-badge { background:#e8f5e9; color:#2e7d32; padding:3px 10px; border-radius:12px; font-size:12px; font-weight:600; }
+        .oam-card { background:#fff; border:1px solid #e0e0e0; border-radius:8px; padding:20px; margin-bottom:20px; box-shadow:0 1px 3px rgba(0,0,0,.06); }
+        .oam-card h2 { margin:0 0 16px; font-size:15px; font-weight:600; color:#555; text-transform:uppercase; letter-spacing:.5px; }
+        .oam-row { display:flex; gap:16px; flex-wrap:wrap; }
+        .oam-field { display:flex; flex-direction:column; gap:4px; flex:1; min-width:200px; }
+        .oam-field label { font-size:12px; font-weight:600; color:#666; }
+        .oam-field select, .oam-field input { padding:8px 10px; border:1px solid #ccc; border-radius:5px; font-size:14px; }
+        .oam-btn { padding:9px 20px; border:none; border-radius:5px; cursor:pointer; font-size:14px; font-weight:500; transition:background .15s; }
+        .oam-btn-primary { background:#1565c0; color:#fff; }
+        .oam-btn-primary:hover { background:#0d47a1; }
+        .oam-btn-primary:disabled { background:#90a4ae; cursor:not-allowed; }
+        .oam-btn-success { background:#2e7d32; color:#fff; }
+        .oam-btn-success:hover { background:#1b5e20; }
+        .oam-btn-ghost { background:#f5f5f5; color:#333; border:1px solid #ccc; }
+        .oam-btn-ghost:hover { background:#eeeeee; }
+        .oam-btn-danger { background:#c62828; color:#fff; }
+        .oam-progress { background:#e3f2fd; border-left:4px solid #1565c0; padding:12px 16px; border-radius:4px; margin-bottom:16px; display:flex; align-items:center; gap:10px; }
+        .oam-spinner { width:18px; height:18px; border:3px solid #1565c0; border-top-color:transparent; border-radius:50%; animation:spin .7s linear infinite; }
+        @keyframes spin { to { transform:rotate(360deg); } }
+        .oam-alert { padding:12px 16px; border-radius:5px; margin-bottom:16px; font-size:14px; }
+        .oam-alert-error { background:#ffebee; border-left:4px solid #c62828; color:#b71c1c; }
+        .oam-alert-success { background:#e8f5e9; border-left:4px solid #2e7d32; color:#1b5e20; }
+        table.oam-table { width:100%; border-collapse:collapse; font-size:13px; }
+        .oam-table th { background:#f5f5f5; padding:10px 12px; text-align:left; font-weight:600; color:#555; border-bottom:2px solid #e0e0e0; }
+        .oam-table td { padding:9px 12px; border-bottom:1px solid #f0f0f0; vertical-align:middle; }
+        .oam-table tr:hover td { background:#fafafa; }
+        .oam-conf { display:inline-block; padding:2px 8px; border-radius:10px; font-size:11px; font-weight:700; }
+        .oam-conf-high { background:#e8f5e9; color:#2e7d32; }
+        .oam-conf-mid  { background:#fff8e1; color:#f57f17; }
+        .oam-conf-low  { background:#ffebee; color:#c62828; }
+        .oam-badge-req { background:#fff3e0; color:#e65100; padding:2px 6px; border-radius:8px; font-size:10px; font-weight:700; }
+        .oam-select-field { width:100%; padding:6px 8px; border:1px solid #ccc; border-radius:4px; font-size:12px; }
+        .oam-stats { display:flex; gap:20px; flex-wrap:wrap; }
+        .oam-stat { background:#f5f5f5; padding:14px 20px; border-radius:6px; text-align:center; min-width:110px; }
+        .oam-stat .num { font-size:28px; font-weight:700; color:#1565c0; }
+        .oam-stat .lbl { font-size:11px; color:#777; margin-top:2px; }
+        .oam-history table { width:100%; }
+        .oam-tab-bar { display:flex; border-bottom:2px solid #e0e0e0; margin-bottom:20px; }
+        .oam-tab { padding:10px 20px; cursor:pointer; font-size:14px; font-weight:500; color:#777; border-bottom:2px solid transparent; margin-bottom:-2px; }
+        .oam-tab.active { color:#1565c0; border-bottom-color:#1565c0; }
+        .oam-empty { text-align:center; padding:40px; color:#aaa; font-size:14px; }
+    </style>
+</head>
+<body>
+<div id="otto-ai-mapper-app"></div>
+
+<script>
+// ─────────────────────────────────────────────────────────────────────────────
+// OTTO AI Mapper – Single-file Angular-free UI
+// Uses plain JS + fetch to call the plugin REST API
+// ─────────────────────────────────────────────────────────────────────────────
+
+const API_BASE = '/rest/otto-ai-mapper';
+
+const state = {
+    tab:         'mapping',  // 'mapping' | 'history' | 'settings'
+    loading:     false,
+    error:       null,
+    success:     null,
+    config:      null,
+    ottoFields:  [],
+    plentyFields:[],
+    catalogId:   '',
+    result:      null,
+    history:     [],
+    plentyFieldMap: {},  // key -> label lookup
+};
+
+// ─── DOM helpers ─────────────────────────────────────────────────────────────
+
+const $ = id => document.getElementById(id);
+const render = () => {
+    $('otto-ai-mapper-app').innerHTML = buildHtml();
+    attachListeners();
+};
+
+// ─── API calls ────────────────────────────────────────────────────────────────
+
+async function apiFetch(path, method = 'GET', body = null) {
+    const opts = {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+    };
+    if (body) opts.body = JSON.stringify(body);
+    const res = await fetch(API_BASE + path, opts);
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Request failed');
+    return data;
+}
+
+async function loadInitial() {
+    state.loading = true; render();
+    try {
+        const [config, otto, plenty, history] = await Promise.all([
+            apiFetch('/config'),
+            apiFetch('/otto-fields'),
+            apiFetch('/plenty-fields'),
+            apiFetch('/history'),
+        ]);
+        state.config      = config;
+        state.ottoFields  = otto;
+        state.plentyFields= plenty;
+        state.history     = history;
+        state.plentyFieldMap = {};
+        plenty.forEach(f => { state.plentyFieldMap[f.key] = f.label; });
+        if (config.otto_catalog_id) state.catalogId = config.otto_catalog_id;
+    } catch(e) {
+        state.error = e.message;
+    }
+    state.loading = false; render();
+}
+
+async function runMapping() {
+    const id = parseInt($('catalogId')?.value || state.catalogId);
+    if (!id || id <= 0) { state.error = 'Please enter a valid Catalog ID.'; render(); return; }
+    state.catalogId = id;
+    state.loading   = true;
+    state.error     = null;
+    state.success   = null;
+    state.result    = null;
+    render();
+    try {
+        const result = await apiFetch('/run-mapping', 'POST', { catalogId: id });
+        state.result  = result;
+        state.history = [{ catalogId: id, mappedAt: result.mappedAt, totalFields: result.totalFields, mappedCount: result.mappedCount, auto_applied: result.auto_applied || false }, ...state.history].slice(0,20);
+        state.success = `AI mapping completed: ${result.mappedCount} of ${result.totalFields} fields mapped.`;
+    } catch(e) {
+        state.error = e.message;
+    }
+    state.loading = false; render();
+}
+
+async function applyMapping() {
+    if (!state.result) return;
+    const proposals = collectProposalsFromUI();
+    state.loading = true; render();
+    try {
+        await apiFetch('/apply-mapping', 'POST', { catalogId: state.result.catalogId, proposals });
+        state.success = `Mapping applied successfully to catalog ${state.result.catalogId}.`;
+    } catch(e) {
+        state.error = e.message;
+    }
+    state.loading = false; render();
+}
+
+async function loadExistingResult() {
+    const id = parseInt($('catalogId')?.value || state.catalogId);
+    if (!id) return;
+    state.loading = true; render();
+    try {
+        state.result = await apiFetch(`/mapping-result/${id}`);
+        state.catalogId = id;
+    } catch(e) {
+        state.error = `No existing result for catalog ${id}.`;
+    }
+    state.loading = false; render();
+}
+
+function collectProposalsFromUI() {
+    if (!state.result) return [];
+    return state.result.proposals.map((p, i) => {
+        const sel = $(`field-select-${i}`);
+        const plenty_field = sel ? (sel.value || null) : p.plenty_field;
+        return { ...p, plenty_field, above_threshold: plenty_field !== null };
+    });
+}
+
+// ─── HTML builders ────────────────────────────────────────────────────────────
+
+function confBadge(c) {
+    const pct = Math.round(c * 100);
+    const cls = c >= .75 ? 'high' : c >= .5 ? 'mid' : 'low';
+    return `<span class="oam-conf oam-conf-${cls}">${pct}%</span>`;
+}
+
+function plentySelect(idx, current) {
+    const opts = state.plentyFields.map(f =>
+        `<option value="${f.key}" ${f.key === current ? 'selected' : ''}>${f.label} (${f.key})</option>`
+    ).join('');
+    return `<select id="field-select-${idx}" class="oam-select-field">
+        <option value="">— not mapped —</option>
+        ${opts}
+    </select>`;
+}
+
+function buildMappingTab() {
+    return `
+    <div class="oam-card">
+        <h2>Run AI Mapping</h2>
+        <div class="oam-row" style="align-items:flex-end">
+            <div class="oam-field" style="max-width:220px">
+                <label>OTTO Catalog ID</label>
+                <input id="catalogId" type="number" min="1" value="${state.catalogId || ''}" placeholder="e.g. 4711">
+            </div>
+            <button class="oam-btn oam-btn-primary" id="btn-run" ${state.loading ? 'disabled' : ''}>
+                ${state.loading ? '<span style="display:flex;align-items:center;gap:8px"><div class="oam-spinner"></div>Running…</span>' : '⚡ Run AI Mapping'}
+            </button>
+            <button class="oam-btn oam-btn-ghost" id="btn-load">Load Existing Result</button>
+        </div>
+        ${state.config ? `<p style="margin:10px 0 0;font-size:12px;color:#888">Model: <b>${state.config.ai_model}</b> · Confidence threshold: <b>${Math.round(parseFloat(state.config.confidence_threshold)*100)}%</b> · Auto-apply: <b>${state.config.auto_apply==='1'?'Yes':'No'}</b> · API key: <b>${state.config.api_key_configured ? '✅ configured' : '❌ not set'}</b></p>` : ''}
+    </div>
+
+    ${state.result ? buildResultCard() : ''}
+    `;
+}
+
+function buildResultCard() {
+    const r = state.result;
+    const coveragePct = r.totalFields > 0 ? Math.round((r.mappedCount / r.totalFields) * 100) : 0;
+
+    return `
+    <div class="oam-card">
+        <h2>Mapping Result – Catalog ${r.catalogId}</h2>
+        <div class="oam-stats" style="margin-bottom:20px">
+            <div class="oam-stat"><div class="num">${r.totalFields}</div><div class="lbl">Total Fields</div></div>
+            <div class="oam-stat"><div class="num" style="color:#2e7d32">${r.mappedCount}</div><div class="lbl">Mapped</div></div>
+            <div class="oam-stat"><div class="num" style="color:#c62828">${r.totalFields - r.mappedCount}</div><div class="lbl">Unmapped</div></div>
+            <div class="oam-stat"><div class="num">${coveragePct}%</div><div class="lbl">Coverage</div></div>
+            <div class="oam-stat"><div class="num" style="font-size:13px;padding-top:6px">${new Date(r.mappedAt).toLocaleString('de-DE')}</div><div class="lbl">Mapped at</div></div>
+        </div>
+
+        <table class="oam-table">
+            <thead>
+                <tr>
+                    <th>OTTO Field</th>
+                    <th>Req.</th>
+                    <th>AI Suggestion</th>
+                    <th>Confidence</th>
+                    <th>Reason</th>
+                    <th>Override / Confirm</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${r.proposals.map((p, i) => `
+                <tr>
+                    <td><b>${p.otto_field}</b></td>
+                    <td>${state.ottoFields.find(f=>f.key===p.otto_field)?.required ? '<span class="oam-badge-req">REQ</span>' : ''}</td>
+                    <td style="color:#555;font-size:12px">${p.plenty_field ? (state.plentyFieldMap[p.plenty_field] || p.plenty_field) : '<i style="color:#aaa">—</i>'}</td>
+                    <td>${confBadge(p.confidence)}</td>
+                    <td style="font-size:12px;color:#777;max-width:200px">${p.reason || ''}</td>
+                    <td>${plentySelect(i, p.plenty_field)}</td>
+                </tr>`).join('')}
+            </tbody>
+        </table>
+
+        <div style="display:flex;gap:12px;margin-top:16px">
+            <button class="oam-btn oam-btn-success" id="btn-apply">✅ Apply Mapping to Catalog</button>
+            <button class="oam-btn oam-btn-ghost" id="btn-rerun">↻ Re-run AI Mapping</button>
+        </div>
+    </div>`;
+}
+
+function buildHistoryTab() {
+    return `
+    <div class="oam-card oam-history">
+        <h2>Mapping History (last ${state.history.length} runs)</h2>
+        ${state.history.length === 0 ? '<div class="oam-empty">No mapping runs yet.</div>' : `
+        <table class="oam-table">
+            <thead><tr><th>Catalog ID</th><th>Mapped at</th><th>Fields mapped</th><th>Coverage</th><th>Auto-applied</th></tr></thead>
+            <tbody>
+                ${state.history.map(h => `
+                <tr>
+                    <td>${h.catalogId}</td>
+                    <td>${new Date(h.mappedAt).toLocaleString('de-DE')}</td>
+                    <td>${h.mappedCount} / ${h.totalFields}</td>
+                    <td>${h.totalFields > 0 ? Math.round(h.mappedCount/h.totalFields*100) : 0}%</td>
+                    <td>${h.auto_applied ? '✅' : '—'}</td>
+                </tr>`).join('')}
+            </tbody>
+        </table>`}
+    </div>`;
+}
+
+function buildSettingsTab() {
+    return `
+    <div class="oam-card">
+        <h2>Plugin Settings</h2>
+        <p style="font-size:14px;color:#555;line-height:1.6">
+            Settings are managed in <b>Plugins → Plugin overview → OttoAiMapper → Configuration</b>.
+        </p>
+        <table class="oam-table" style="margin-top:12px;max-width:600px">
+            <thead><tr><th>Setting</th><th>Current Value</th></tr></thead>
+            <tbody>
+                <tr><td>AI Model</td><td><b>${state.config?.ai_model ?? '—'}</b></td></tr>
+                <tr><td>Confidence Threshold</td><td><b>${state.config ? Math.round(parseFloat(state.config.confidence_threshold)*100)+'%' : '—'}</b></td></tr>
+                <tr><td>Auto-apply Mappings</td><td><b>${state.config?.auto_apply === '1' ? 'Yes' : 'No'}</b></td></tr>
+                <tr><td>OpenAI API Key</td><td>${state.config?.api_key_configured ? '✅ Configured' : '❌ Not configured'}</td></tr>
+                <tr><td>Default Catalog ID</td><td><b>${state.config?.otto_catalog_id || '—'}</b></td></tr>
+                <tr><td>Language</td><td><b>${state.config?.language === 'de' ? 'Deutsch' : 'English'}</b></td></tr>
+            </tbody>
+        </table>
+    </div>`;
+}
+
+function buildHtml() {
+    if (state.loading && !state.result && !state.config) {
+        return `<div class="oam-root"><div class="oam-progress"><div class="oam-spinner"></div> Loading plugin…</div></div>`;
+    }
+    return `
+    <div class="oam-root">
+        <div class="oam-header">
+            <h1>🤖 OTTO AI Mapper</h1>
+            <span class="oam-badge">v1.0.0</span>
+        </div>
+
+        ${state.error   ? `<div class="oam-alert oam-alert-error">⚠️ ${state.error}</div>` : ''}
+        ${state.success ? `<div class="oam-alert oam-alert-success">✅ ${state.success}</div>` : ''}
+
+        <div class="oam-tab-bar">
+            <div class="oam-tab ${state.tab==='mapping'?'active':''}" data-tab="mapping">Field Mapping</div>
+            <div class="oam-tab ${state.tab==='history'?'active':''}" data-tab="history">History</div>
+            <div class="oam-tab ${state.tab==='settings'?'active':''}" data-tab="settings">Settings</div>
+        </div>
+
+        ${state.tab === 'mapping'  ? buildMappingTab()  : ''}
+        ${state.tab === 'history'  ? buildHistoryTab()  : ''}
+        ${state.tab === 'settings' ? buildSettingsTab() : ''}
+    </div>`;
+}
+
+// ─── Event listeners ──────────────────────────────────────────────────────────
+
+function attachListeners() {
+    document.querySelectorAll('.oam-tab[data-tab]').forEach(el => {
+        el.addEventListener('click', () => {
+            state.tab = el.dataset.tab;
+            state.error = null; state.success = null;
+            render();
+        });
+    });
+    $('btn-run')?.addEventListener('click', runMapping);
+    $('btn-load')?.addEventListener('click', loadExistingResult);
+    $('btn-apply')?.addEventListener('click', applyMapping);
+    $('btn-rerun')?.addEventListener('click', runMapping);
+}
+
+// ─── Bootstrap ────────────────────────────────────────────────────────────────
+
+loadInitial();
+</script>
+</body>
+</html>

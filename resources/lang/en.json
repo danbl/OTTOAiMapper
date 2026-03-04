@@ -1,0 +1,14 @@
+{
+    "OttoAiMapper": {
+        "Config": {
+            "tabGeneral": "General",
+            "tabCatalog": "Catalog",
+            "labelOpenAiApiKey": "OpenAI API Key",
+            "labelAiModel": "AI Model",
+            "labelConfidenceThreshold": "Mapping Confidence Threshold",
+            "labelAutoApply": "Automatically apply mappings",
+            "labelOttoCatalogId": "Default OTTO Catalog ID",
+            "labelLanguage": "Language for AI prompts"
+        }
+    }
+}

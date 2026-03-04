@@ -1,0 +1,14 @@
+{
+    "OttoAiMapper": {
+        "Config": {
+            "tabGeneral": "Allgemein",
+            "tabCatalog": "Katalog",
+            "labelOpenAiApiKey": "OpenAI API-Schlüssel",
+            "labelAiModel": "KI-Modell",
+            "labelConfidenceThreshold": "Mapping-Konfidenz-Schwellenwert",
+            "labelAutoApply": "Mappings automatisch anwenden",
+            "labelOttoCatalogId": "Standard OTTO Katalog-ID",
+            "labelLanguage": "Sprache für KI-Prompts"
+        }
+    }
+}

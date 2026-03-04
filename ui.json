@@ -1,0 +1,12 @@
+{
+    "defaultEntryPoint": "index.html",
+    "navigationEntries": [
+        {
+            "moduleName": "otto-ai-mapper",
+            "displayedName": "OTTO AI Mapper",
+            "path": "otto-ai-mapper",
+            "icon": "icon-plugin",
+            "position": 400
+        }
+    ]
+}

@@ -1,0 +1,28 @@
+{
+    "name": "OttoAiMapper",
+    "namespace": "OttoAiMapper",
+    "type": "backend",
+    "version": "1.0.0",
+    "description": "AI-powered automatic field mapping between OTTO Market and PlentyONE catalog data fields",
+    "shortDescription": {
+        "de": "KI-gestütztes automatisches Feldmapping zwischen OTTO Market und PlentyONE Katalogfeldern",
+        "en": "AI-powered automatic field mapping between OTTO Market and PlentyONE catalog data fields"
+    },
+    "keywords": ["otto", "marketplace", "catalog", "ai", "mapping", "automation"],
+    "author": "Your Company GmbH",
+    "email": "support@yourcompany.com",
+    "phone": "+49 000 000 000",
+    "homepage": "https://yourcompany.com",
+    "serviceProvider": "OttoAiMapper\\Providers\\OttoAiMapperServiceProvider",
+    "require": [],
+    "dependencies": {
+        "guzzlehttp/guzzle": "^7.0"
+    },
+    "javaScriptFiles": [],
+    "containers": [],
+    "dataProviders": [],
+    "runOnBuild": [],
+    "platform": {
+        "php": ">=7.4"
+    }
+}
